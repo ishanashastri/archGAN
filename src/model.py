@@ -1,7 +1,7 @@
 import tensorflow as tf
 import numpy as np
 
-import cPickle
+import pickle
 import ipdb
 class Model():
     def __init__(self):

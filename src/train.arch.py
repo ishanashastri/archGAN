@@ -6,6 +6,7 @@ import numpy as np
 import cv2
 from model import *
 from util import *
+import initData
 
 n_epochs = 10000
 learning_rate_val = 0.002
@@ -32,18 +33,10 @@ if not os.path.exists(result_path):
     os.makedirs( result_path )
 
 if not os.path.exists( trainset_path ) or not os.path.exists( testset_path ):
-
-    trainset_dir = os.path.join( dataset_path, 'arch_train_original' )
-    testset_dir = os.path.join( dataset_path, 'arch_eval_gt' )
-
-    trainset = pd.DataFrame({'image_path': map(lambda x: os.path.join( trainset_dir, x ), os.listdir(trainset_dir))})
-    testset = pd.DataFrame({'image_path': map(lambda x: os.path.join( testset_dir, x ), os.listdir(testset_dir))})
-
-    trainset.to_pickle( trainset_path )
-    testset.to_pickle( testset_path )
+    [trainset, testset] = initData.pickler(trainset_path, testset_path, dataset_path)
 else:
-    trainset = pd.read_pickle( trainset_path )
-    testset = pd.read_pickle( testset_path )
+    trainset = pd.read_pickle(trainset_path)
+    testset = pd.read_pickle(testset_path)
 
 testset.index = range(len(testset))
 testset = testset.ix[np.random.permutation(len(testset))]
@@ -167,24 +160,24 @@ for epoch in range(n_epochs):
                         test_image[32:32+64,32:32+64] = 0
                         cv2.imwrite( os.path.join(result_path, 'img_'+str(ii)+'.ori.jpg'), test_image)
 
-            print "========================================================================"
-            print bn1_val.max(), bn1_val.min()
-            print bn2_val.max(), bn2_val.min()
-            print bn3_val.max(), bn3_val.min()
-            print bn4_val.max(), bn4_val.min()
-            print bn5_val.max(), bn5_val.min()
-            print bn6_val.max(), bn6_val.min()
-            print debn4_val.max(), debn4_val.min()
-            print debn3_val.max(), debn3_val.min()
-            print debn2_val.max(), debn2_val.min()
-            print debn1_val.max(), debn1_val.min()
-            print recon_ori_vals.max(), recon_ori_vals.min()
-            print reconstruction_vals.max(), reconstruction_vals.min()
-            print loss_G_val, loss_D_val
-            print "========================================================================="
+            print("========================================================================")
+            print(bn1_val.max(), bn1_val.min())
+            print(bn2_val.max(), bn2_val.min())
+            print(bn3_val.max(), bn3_val.min())
+            print(bn4_val.max(), bn4_val.min())
+            print(bn5_val.max(), bn5_val.min())
+            print(bn6_val.max(), bn6_val.min())
+            print(debn4_val.max(), debn4_val.min())
+            print(debn3_val.max(), debn3_val.min())
+            print(debn2_val.max(), debn2_val.min())
+            print(debn1_val.max(), debn1_val.min())
+            print(recon_ori_vals.max(), recon_ori_vals.min())
+            print(reconstruction_vals.max(), reconstruction_vals.min())
+            print(loss_G_val, loss_D_val)
+            print("=========================================================================")
 
             if np.isnan(reconstruction_vals.min() ) or np.isnan(reconstruction_vals.max()):
-                print "NaN detected!!"
+                print("NaN detected!!")
                 ipdb.set_trace()
 
         # Generative Part is updated every iteration
@@ -206,7 +199,7 @@ for epoch in range(n_epochs):
                     is_train: True
                     })
 
-        print "Iter:", iters, "Gen Loss:", loss_G_val, "Recon Loss:", loss_recon_val, "Gen ADV Loss:", loss_adv_G_val,  "Dis Loss:", loss_D_val, "||||", adv_pos_val.mean(), adv_neg_val.min(), adv_neg_val.max()
+        print("Iter:", iters, "Gen Loss:", loss_G_val, "Recon Loss:", loss_recon_val, "Gen ADV Loss:", loss_adv_G_val,  "Dis Loss:", loss_D_val, "||||", adv_pos_val.mean(), adv_neg_val.min(), adv_neg_val.max())
 
         iters += 1
 
