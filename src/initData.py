@@ -11,7 +11,7 @@ if not os.path.exists( trainset_path ) or not os.path.exists( testset_path ):
 
     for folder in os.listdir(dataset_path):
         files = np.random.choice(os.listdir(dataset_path), len(os.listdir(dataset_path)*0.75,replace=False))
-        trainset = pd.DataFrame({'image_path': map(lambda x: os.path.join('../data', x), files})
+        trainset = pd.DataFrame({'image_path': map(lambda x: os.path.join('../data', x), files}))
     #trainset_dir = os.path.join( dataset_path, 'arch_train_original' )
     #testset_dir = os.path.join( dataset_path, 'arch_eval_gt' )
 

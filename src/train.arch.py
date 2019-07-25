@@ -20,7 +20,7 @@ hiding_size = 64
 
 trainset_path = '../data/arch_trainset.pickle'
 testset_path  = '../data/arch_testset.pickle'
-dataset_path = '/data/storage/arch/'
+dataset_path = '../data/storage/'
 model_path = '../models/arch/'
 result_path= '../results/arch/'
 pretrained_model_path = None # '../models/Paris/model-0'
