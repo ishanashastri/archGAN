@@ -93,8 +93,9 @@ class Model():
             def update():
                 with tf.control_dependencies([ema_apply_op]):
                     return tf.identity(batch_mean), tf.identity(batch_var)
-
-            ema_apply_op = ema.apply([batch_mean, batch_var])
+            
+            with tf.variable_scope(tf.get_variable_scope(), reuse=tf.AUTO_REUSE):
+                ema_apply_op = ema.apply([batch_mean, batch_var])
             ema_mean, ema_var = ema.average(batch_mean), ema.average(batch_var)
             mean, var = tf.cond(
                     is_train,

@@ -45,7 +45,7 @@ is_train = tf.placeholder( tf.bool )
 learning_rate = tf.placeholder( tf.float32, [])
 images_tf = tf.placeholder( tf.float32, [batch_size, 128, 128, 3], name="images")
 
-labels_D = tf.concat( 0, [tf.ones([batch_size]), tf.zeros([batch_size])] )
+labels_D = tf.concat( [tf.ones([batch_size]), tf.zeros([batch_size])], 0 )
 labels_G = tf.ones([batch_size])
 images_hiding = tf.placeholder( tf.float32, [batch_size, hiding_size, hiding_size, 3], name='images_hiding')
 
@@ -54,12 +54,12 @@ model = Model()
 bn1, bn2, bn3, bn4, bn5, bn6, debn4, debn3, debn2, debn1, reconstruction_ori, reconstruction = model.build_reconstruction(images_tf, is_train)
 adversarial_pos = model.build_adversarial(images_hiding, is_train)
 adversarial_neg = model.build_adversarial(reconstruction, is_train, reuse=True)
-adversarial_all = tf.concat(0, [adversarial_pos, adversarial_neg])
+adversarial_all = tf.concat([adversarial_pos, adversarial_neg], 0)
 
 # Applying bigger loss for overlapping region
 mask_recon = tf.pad(tf.ones([hiding_size - 2*overlap_size, hiding_size - 2*overlap_size]), [[overlap_size,overlap_size], [overlap_size,overlap_size]])
 mask_recon = tf.reshape(mask_recon, [hiding_size, hiding_size, 1])
-mask_recon = tf.concat(2, [mask_recon]*3)
+mask_recon = tf.concat([mask_recon]*3, 2)
 mask_overlap = 1 - mask_recon
 
 loss_recon_ori = tf.square( images_hiding - reconstruction )
@@ -67,20 +67,24 @@ loss_recon_center = tf.reduce_mean(tf.sqrt( 1e-5 + tf.reduce_sum(loss_recon_ori 
 loss_recon_overlap = tf.reduce_mean(tf.sqrt( 1e-5 + tf.reduce_sum(loss_recon_ori * mask_overlap, [1,2,3]))) * 10. # Loss for overlapping region
 loss_recon = loss_recon_center + loss_recon_overlap
 
-loss_adv_D = tf.reduce_mean( tf.nn.sigmoid_cross_entropy_with_logits(adversarial_all, labels_D))
-loss_adv_G = tf.reduce_mean( tf.nn.sigmoid_cross_entropy_with_logits(adversarial_neg, labels_G))
+loss_adv_D = tf.reduce_mean( tf.nn.sigmoid_cross_entropy_with_logits(logits=adversarial_all, labels=labels_D))
+loss_adv_G = tf.reduce_mean( tf.nn.sigmoid_cross_entropy_with_logits(logits=adversarial_neg, labels=labels_G))
 
 loss_G = loss_adv_G * lambda_adv + loss_recon * lambda_recon
 loss_D = loss_adv_D # * lambda_adv
 
-var_G = filter( lambda x: x.name.startswith('GEN'), tf.trainable_variables())
-var_D = filter( lambda x: x.name.startswith('DIS'), tf.trainable_variables())
+var_G = [x for x in tf.trainable_variables() if x.name.startswith('GEN')]
+var_D = [x for x in tf.trainable_variables() if x.name.startswith('DIS')]
+# var_G = filter( lambda x: x.name.startswith('GEN'), tf.trainable_variables())
+# var_D = filter( lambda x: x.name.startswith('DIS'), tf.trainable_variables())
 
-W_G = filter(lambda x: x.name.endswith('W:0'), var_G)
-W_D = filter(lambda x: x.name.endswith('W:0'), var_D)
+W_G = [x for x in var_G if x.name.endswith('W:0')]
+W_D = [x for x in var_D if x.name.endswith('W:0')]
+# W_G = filter(lambda x: x.name.endswith('W:0'), var_G)
+# W_D = filter(lambda x: x.name.endswith('W:0'), var_D)
 
-loss_G += weight_decay_rate * tf.reduce_mean(tf.pack( map(lambda x: tf.nn.l2_loss(x), W_G)))
-loss_D += weight_decay_rate * tf.reduce_mean(tf.pack( map(lambda x: tf.nn.l2_loss(x), W_D)))
+loss_G += weight_decay_rate * tf.reduce_mean(tf.stack([tf.nn.l2_loss(x) for x in W_G]))
+loss_D += weight_decay_rate * tf.reduce_mean(tf.stack([tf.nn.l2_loss(x) for x in W_D]))
 
 gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.4)
 sess = tf.InteractiveSession(config=tf.ConfigProto(gpu_options=gpu_options))
@@ -118,13 +122,19 @@ for epoch in range(n_epochs):
         image_paths = trainset[start:end]['image_path'].values
         images_ori = map(lambda x: load_image( x ), image_paths)
 
+        # print("============================")
+        # print("EPOCH: " , epoch, "IMAGES_ORI: " , list(images_ori))
+        # print("============================\n")
+
         if iters % 2 == 0:
             images_ori = map(lambda img: img[:,::-1,:], images_ori)
 
-        is_none = np.sum(map(lambda x: x is None, images_ori))
-        if is_none > 0: continue
+        # is_none = np.sum(map(lambda x: x is None, images_ori))
+        # is_none = np.sum([x is None for x in images_ori])
+        # if is_none > 0: continue
 
-        images_crops = map(lambda x: crop_random(x, x=32, y=32), images_ori)
+        images_crops = [crop_random(x, x=32, y=32) for x in images_ori]
+        # print(images_crops)
         images, crops,_,_ = zip(*images_crops)
 
         # Printing activations every 10 iterations
@@ -173,7 +183,7 @@ for epoch in range(n_epochs):
             print(debn1_val.max(), debn1_val.min())
             print(recon_ori_vals.max(), recon_ori_vals.min())
             print(reconstruction_vals.max(), reconstruction_vals.min())
-            print(loss_G_val, loss_D_val)
+            print("LOSS_G: ", loss_G_val, " | LOSS_D: ", loss_D_val)
             print("=========================================================================")
 
             if np.isnan(reconstruction_vals.min() ) or np.isnan(reconstruction_vals.max()):
